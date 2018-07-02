@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}My classrooms{% endblock %}
+
+{% block content %}
+    <h1>My classrooms</h1>
+
+    <div class="module">
+        {% for classroom in object_list %}
+            <div class="classroom-info">
+                <h3>{{ classroom.title }}</h3>
+                <p><a href="{% url "student_classroom_detail" classroom.id %}">Access contents</a></p>
+            </div>
+        {% empty %}
+            <p>
+                You are not enrolled in any classrooms yet.
+                <a href="{% url "classroom_list" %}">Browse classrooms</a> to enroll in a classroom.
+            </p>
+        {% endfor %}
+    </div>
+{% endblock %}
