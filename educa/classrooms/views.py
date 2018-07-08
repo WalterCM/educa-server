@@ -54,7 +54,6 @@ class UserRegisterView(APIView):
             serializer = UserSerializer()
 
         data = {'username':username, 'password':password2, 'email':email, 'first_name':first_name, 'last_name':last_name}
-
         user = serializer.create(data)
 
         if user_type == 'instructor' or user_type == 'parent':
@@ -62,6 +61,35 @@ class UserRegisterView(APIView):
             group.user_set.add(user)
         return Response({'registered':True})
 
+class AddStudentView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        is_parent = request.user.groups.filter(name='parent').exists()
+        if is_parent:
+            parent = get_object_or_404(Parent, id=request.user.id)
+            student_ids = [student.id for student in parent.students.all()]
+            students = User.objects.exclude(groups__name='instructor').exclude(groups__name='parent').exclude(id__in=student_ids).exclude(is_superuser=True)
+
+        s = UserSerializer(students, many=True)
+        return Response(s.data)
+
+    def post(self, request, format=None):
+        print("post")
+        student_username = request.data["username"]
+        print("username: " + student_username)
+        student = get_object_or_404(User, username=student_username)
+        print(student)
+
+        is_parent = request.user.groups.filter(name='parent').exists()
+
+        if is_parent:
+            parent = get_object_or_404(Parent, id=request.user.id)
+            parent.students.add(student)
+        else:
+            return Response({'added':False, 'reason':'Only parents can add students'})
+
+        return Response({'added':True})
 
 class MineView(APIView):
     #authentication_classes = (JWTAuthentication,)
@@ -69,14 +97,20 @@ class MineView(APIView):
 
     def get(self, request, format=None):
         is_professor = request.user.groups.filter(name='instructor').exists()
+        print(is_professor)
         is_parent = request.user.groups.filter(name='parent').exists()
+        print(is_parent)
+        
         if is_professor:
             classrooms = [c.classroom for c in CourseInClassroom.objects.filter(professor=request.user)]
         elif is_parent:
             parent = get_object_or_404(Parent, id=request.user.id)
-            classrooms = list(set([c.classroom for c in StudentInClassroom.objects.filter(student__in=parent.students.all())]))
+            student_ids = [student.id for student in parent.students.all()]
+            print(student_ids)
+            classrooms = list(set([c.classroom for c in StudentInClassroom.objects.filter(student__in=student_ids)]))
         else:
             classrooms = [c.classroom for c in StudentInClassroom.objects.filter(student=request.user)]
+            print(classrooms)
 
         s = ClassroomSerializer(classrooms, many=True)
         return Response(s.data)
@@ -84,6 +118,7 @@ class MineView(APIView):
 class NotmineView(APIView):
     def get(self, request, format=None):
         is_professor = request.user.groups.filter(name='instructor').exists()
+        
         if is_professor:
             classrooms = []
             return Response({"enrollment":False, "reason":"Professors shouldn't be able to enroll"})
@@ -104,12 +139,15 @@ class CoursesFromClassroomView(APIView):
     def get(self, request, classroom_id, format=None):
         is_professor = request.user.groups.filter(name='instructor').exists()
         is_parent = request.user.groups.filter(name='parent').exists()
+        
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         courses = []
+        
         if is_professor:
             courses = [c for c in CourseInClassroom.objects.filter(professor=request.user, classroom=classroom)]
         elif is_parent:
-            if StudentInClassroom.objects.filter(student__in=request.user.students).exists():
+            parent = get_object_or_404(Parent, id=request.user.id)
+            if StudentInClassroom.objects.filter(student__in=parent.students.all()).exists():
                 courses = [c for c in CourseInClassroom.objects.filter(classroom=classroom)]
         else:
             if StudentInClassroom.objects.filter(student=request.user).exists():
@@ -137,12 +175,26 @@ class CoursesFromClassroomView(APIView):
 
 class ClassroomEnrollView(APIView):
     def post(self, request, classroom_id, format=None):
-        classroom = get_object_or_404(Classroom, pk=classroom_id)
+        print("ClassroomEnrollView")
+        print('1"')
+        print("classrrom id : " + str(classroom_id))
+        print("2")
+        classroom = get_object_or_404(Classroom, id=classroom_id)
+        print(classroom)
         if StudentInClassroom.objects.filter(student=request.user, classroom=classroom).exists():
             return Response({'enrolled':False, 'code':1, 'reason':'Already enrolled in that classoom'})
-        s = StudentInClassroom(student=request.user, classroom=classroom)
-        s.save()
-        #classroom.students.add(request.user)
+        sic = StudentInClassroom(student=request.user, classroom=classroom)
+        print(sic)
+        sic.save()
+
+        for course in classroom.courses.all():
+            print(course)
+            cic = get_object_or_404(CourseInClassroom, course=course, classroom=classroom)
+            print(cic)
+            membership = StudentInCourse(student=sic, course=cic)
+            print(membership)
+            membership.save()
+
         return Response({'enrolled':True})
 
 class StudentsAttendanceView(APIView):
@@ -150,11 +202,16 @@ class StudentsAttendanceView(APIView):
     permission_classes = (IsAuthenticated, IsEnrolled,)
 
     def get(self, request, classroom_id, course_id, format=None):
-        classroom = get_object_or_404(Classroom, pk=classroom_id)
-        course = get_object_or_404(Course, pk=course_id)
+        print("get")
+        classroom = get_object_or_404(Classroom, id=classroom_id)
+        print(classroom)
+        course = get_object_or_404(Course, id=course_id)
+        print(course)
+
         #classes_done = classroom.classes_done
         is_professor = request.user.groups.filter(name='instructor').exists()
         is_parent = request.user.groups.filter(name='parent').exists()
+
         if is_professor:
             students = classroom.students.all()
         elif is_parent:
@@ -162,14 +219,23 @@ class StudentsAttendanceView(APIView):
             students = list(set(parent.students.all()).intersection(classroom.students.all()))
         else:
             students = classroom.students.filter(id=request.user.id)
+        
+        print(students)
         students_attendance = []
-        for i in range(len(students)):
-            student = students[i]
+        
+        for student in students:
             sic = get_object_or_404(StudentInClassroom, classroom=classroom, student=student)
+            print(sic)
             cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
+            print(cic)
             classes_done = cic.classes_done
+            print("classes_done: " + str(classes_done))
+            
             membership = get_object_or_404(StudentInCourse, student=sic, course=cic)
+            print(membership)
+            
             classes_attended = membership.classes_attended
+            
             if classes_done is not 0:
                 percentage = classes_attended / classes_done * 100
             else:
@@ -185,16 +251,18 @@ class StudentsAttendanceView(APIView):
         students = JSONParser().parse(BytesIO(str.encode(request.data['students'])))
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         course = get_object_or_404(Course, pk=course_id)
-        #classroom.classes_done += 1
-        #classroom.save()
+        
+        cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
+        cic.classes_done += 1
+        cic.save()
+        
         for i in range(len(students)):
             is_attended = students[i]['is_attended']
             student = get_object_or_404(User, id=students[i]['id'])
             sic = get_object_or_404(StudentInClassroom, classroom=classroom, student=student)
-            cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
-            cic.classes_done += 1
-            cic.save()
+            
             membership = get_object_or_404(StudentInCourse, student=sic, course=cic)
+            
             if is_attended:
                 membership.classes_attended += 1
                 membership.save()
@@ -207,8 +275,10 @@ class StudentsGradesView(APIView):
     def get(self, request, classroom_id, course_id, format=None):
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         course = get_object_or_404(Course, pk=course_id)
+        
         is_professor = request.user.groups.filter(name='instructor').exists()
         is_parent = request.user.groups.filter(name='parent').exists()
+        
         if is_professor:
             students = classroom.students.all()
         elif is_parent:
@@ -216,14 +286,17 @@ class StudentsGradesView(APIView):
             students = list(set(parent.students.all()).intersection(classroom.students.all()))
         else:
             students = classroom.students.filter(id=request.user.id)
+        
         students_grades = []
-        for i in range(len(students)):
-            student = students[i]
+        
+        for student in students:
             sic = get_object_or_404(StudentInClassroom, classroom=classroom, student=student)
             cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
             membership = get_object_or_404(StudentInCourse, student=sic, course=cic)
+            
             pc_average = (membership.pc1 + membership.pc2 + membership.pc3 + membership.pc4) / 4
             grade_average = (3 * pc_average + 3 * membership.midterm + 4 * membership.final) / 10
+            
             students_grades.append({'id':student.id,
                                     'first_name':student.first_name,
                                     'last_name':student.last_name,
@@ -241,6 +314,7 @@ class StudentsGradesView(APIView):
         students = JSONParser().parse(BytesIO(str.encode(request.data['students'])))
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         course = get_object_or_404(Course, pk=course_id)
+        
         for i in range(len(students)):
             student = get_object_or_404(User, id=students[i]['id'])
 
@@ -269,8 +343,7 @@ class StudentsAttachmentsView(APIView):
 
         attachments = Attachment.objects.filter(course=cic)
         attachment_list = []
-        for i in range(len(attachments)):
-            attachment = attachments[i]
+        for attachment in attachments:
             uploader_name = attachment.uploader.first_name + ' ' + attachment.uploader.last_name
             attachment_list.append({'id':attachment.id,
                                     'file':attachment.file.name,
@@ -281,13 +354,16 @@ class StudentsAttachmentsView(APIView):
     def post(self, request, classroom_id, course_id, format=None):
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         course = get_object_or_404(Course, pk=course_id)
+        
         cic = get_object_or_404(CourseInClassroom, course=course, classroom=classroom)
+        
         title = request.data['title']
         file =request.data['file']
 
-        attachment = Attachment(course=cic, uploader=request.user)
-        attachment.file.save(file.name, file)
-        attachment.save()
+        if file:
+            attachment = Attachment(course=cic, uploader=request.user)
+            attachment.file.save(file.name, file)
+            attachment.save()
 
         return self.get(request, classroom_id, course_id)
 
@@ -305,8 +381,8 @@ class StudentsNotificationsView(APIView):
 
         notifications = Notification.objects.filter(course=cic)
         notification_list = []
-        for i in range(len(notifications)):
-            notification = notifications[i]
+        
+        for notification in notifications:
             author_name = notification.author.first_name + ' ' + notification.author.last_name
             notification_list.append({'id':notification.id,
                                     'subject':notification.subject,
@@ -318,6 +394,7 @@ class StudentsNotificationsView(APIView):
     def post(self, request, classroom_id, course_id, format=None):
         classroom = get_object_or_404(Classroom, pk=classroom_id)
         course = get_object_or_404(Course, pk=course_id)
+        
         cic = get_object_or_404(CourseInClassroom, course=course, classroom=classroom)
         subject = request.data['subject']
         text =request.data['text']

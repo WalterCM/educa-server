@@ -46,12 +46,18 @@ class CourseInClassroom(models.Model):
 
     professor = models.ForeignKey(User)
 
+    def __str__(self):
+        return self.course.title + " in " + self.classroom.room 
+
 
 class StudentInClassroom(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
 
     courses = models.ManyToManyField(CourseInClassroom, through='StudentInCourse', blank=True)
+
+    def __str__(self):
+        return self.student.username + " in " + self.classroom.room
 
 
 class StudentInCourse(models.Model):
@@ -66,6 +72,9 @@ class StudentInCourse(models.Model):
     pc4 = models.PositiveIntegerField(default=0)
     midterm = models.PositiveIntegerField(default=0)
     final = models.PositiveIntegerField(default=0)
+
+    def __str__(self):
+        return self.student.student.username + " in " + self.course.course.title
 
 
 class Attachment(models.Model):

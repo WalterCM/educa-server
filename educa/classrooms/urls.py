@@ -12,6 +12,7 @@ urlpatterns = [
     url(r'^mine/$', views.MineView.as_view(), name='my_courses_list'),
     url(r'^notmine/$', views.NotmineView.as_view(), name='enrollment_list'),
     # url(r'^classrooms/create/$', views.ClassroomCreateView.as_view(), name='classroom_create'),
+    url(r'^add-students/$', views.AddStudentView.as_view(), name='student_add'),
     url(r'^classrooms/(?P<classroom_id>\d+)/enroll/$', views.ClassroomEnrollView.as_view(), name='classroom_enroll'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/$', views.CoursesFromClassroomView.as_view(), name='course_list'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/attendance/$', views.StudentsAttendanceView.as_view(), name='class_attendance'),
