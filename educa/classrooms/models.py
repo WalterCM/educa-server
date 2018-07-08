@@ -24,8 +24,6 @@ class Classroom(models.Model):
     room = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True)
     created = models.DateTimeField(auto_now_add=True)
-    classes_done = models.PositiveIntegerField(default=0)
-
     courses = models.ManyToManyField(Course,
                                     through='CourseInClassroom',
                                     blank=True)
@@ -44,14 +42,14 @@ class CourseInClassroom(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
 
+    classes_done = models.PositiveIntegerField(default=0)
+
     professor = models.ForeignKey(User)
 
 
 class StudentInClassroom(models.Model):
     student = models.ForeignKey(User, on_delete=models.CASCADE)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
-
-    classes_attended = models.PositiveIntegerField(default=0)
 
     courses = models.ManyToManyField(CourseInClassroom, through='StudentInCourse', blank=True)
 
@@ -60,6 +58,8 @@ class StudentInCourse(models.Model):
     student = models.ForeignKey(StudentInClassroom, on_delete=models.CASCADE)
     course = models.ForeignKey(CourseInClassroom, on_delete=models.CASCADE)
 
+    classes_attended = models.PositiveIntegerField(default=0)
+
     pc1 = models.PositiveIntegerField(default=0)
     pc2 = models.PositiveIntegerField(default=0)
     pc3 = models.PositiveIntegerField(default=0)
@@ -67,6 +67,16 @@ class StudentInCourse(models.Model):
     midterm = models.PositiveIntegerField(default=0)
     final = models.PositiveIntegerField(default=0)
 
+
+class Attachment(models.Model):
+    course = models.ForeignKey(CourseInClassroom, related_name='attachment_added')
+    created = models.DateTimeField(auto_now_add=True)
+    uploader = models.ForeignKey(User, related_name='attachment_uploaded')
+    title = models.CharField(max_length=200)
+    file = models.FileField(upload_to="attachments", blank=True)
+
+    class Meta:
+        ordering = ('-created',)
 
 class Notification(models.Model):
     course = models.ForeignKey(CourseInClassroom, related_name='notifications_created')
@@ -78,5 +88,5 @@ class Notification(models.Model):
     class Meta:
         ordering = ('-created',)
 
-#class Parent(User):
-#    students = models.ForeignKey(User, related_name='student_added')
+class Parent(User):
+    students = models.ManyToManyField(User, related_name='student_added', blank=True)

@@ -14,7 +14,8 @@ urlpatterns = [
     # url(r'^classrooms/create/$', views.ClassroomCreateView.as_view(), name='classroom_create'),
     url(r'^classrooms/(?P<classroom_id>\d+)/enroll/$', views.ClassroomEnrollView.as_view(), name='classroom_enroll'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/$', views.CoursesFromClassroomView.as_view(), name='course_list'),
-    url(r'^classrooms/(?P<classroom_id>\d+)/attendance/$', views.StudentsAttendanceView.as_view(), name='class_attendance'),
+    url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/attendance/$', views.StudentsAttendanceView.as_view(), name='class_attendance'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/grades/$', views.StudentsGradesView.as_view(), name='class_grades'),
+    url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/attachments/$', views.StudentsAttachmentsView.as_view(), name='class_attachments'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/notifications/$', views.StudentsNotificationsView.as_view(), name='class_notifications'),
 ]

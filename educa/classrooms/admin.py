@@ -9,18 +9,18 @@ class CourseAdmin(admin.ModelAdmin):
 
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):
-    list_display = ['room', 'slug', 'classes_done', 'created']
+    list_display = ['room', 'slug', 'created']
     list_filter = ['created']
     search_fields = ['room']
     prepopulated_fields = {'slug': ('room',)}
 
 @admin.register(CourseInClassroom)
 class CourseInClassroomAdmin(admin.ModelAdmin):
-    list_display = ['course', 'classroom']
+    list_display = ['course', 'classroom', 'classes_done']
 
 @admin.register(StudentInClassroom)
 class StudentInClassroomAdmin(admin.ModelAdmin):
-	list_display = ['student', 'classroom', 'classes_attended']
+	list_display = ['student', 'classroom']
     #prepopulated_fields = {'slug': ('room',)}
 
 @admin.register(StudentInCourse)
