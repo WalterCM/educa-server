@@ -91,13 +91,15 @@ class Attachment(models.Model):
 class Notification(models.Model):
     course = models.ForeignKey(CourseInClassroom, related_name='notifications_created')
     created = models.DateTimeField(auto_now_add=True)
-    read = models.BooleanField(default=False)
+    #read = models.BooleanField(default=False)
+    readers = models.ManyToManyField(User, blank=True)
     author = models.ForeignKey(User, related_name='notification_wrote')
     subject = models.CharField(max_length=200)
     text = models.TextField(max_length=500)
 
     class Meta:
         ordering = ('-created',)
+
 
 class Parent(User):
     students = models.ManyToManyField(User, related_name='student_added', blank=True)

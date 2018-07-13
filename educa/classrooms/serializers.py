@@ -25,7 +25,7 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
             courses = [m.course for m in memberships]
         
         notifications = Notification.objects.filter(course__in=courses)
-        unread_notifications = notifications.filter(read=False)
+        unread_notifications = [n for n in notifications if user not in n.readers.all()]
 
         token['unread_notifications'] = len(unread_notifications)
         return token

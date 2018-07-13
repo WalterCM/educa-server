@@ -359,12 +359,14 @@ class StudentsNotificationsView(APIView):
         
         for notification in notifications:
             author_name = notification.author.first_name + ' ' + notification.author.last_name
+            read = request.user in notification.readers.all()
+            print(read)
             notification_list.append({'id':notification.id,
                                     'subject':notification.subject,
                                     'text':notification.text,
                                     'author':author_name,
                                     'created':notification.created,
-                                    'read':notification.read})
+                                    'read':read})
         return Response({'notifications':notification_list})
 
     def post(self, request, classroom_id, course_id, format=None):
@@ -387,7 +389,7 @@ class StudentsNotificationsReadView(APIView):
     def post(self, request, notification_id, format=None):
         print("post")
         notification = get_object_or_404(Notification, id=notification_id)
-        notification.read = True
+        notification.readers.add(request.user)
         notification.save()
 
         return Response({})
