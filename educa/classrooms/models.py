@@ -70,9 +70,6 @@ class StudentInCourse(models.Model):
     pc1 = models.PositiveIntegerField(default=0)
     pc2 = models.PositiveIntegerField(default=0)
     pc3 = models.PositiveIntegerField(default=0)
-    pc4 = models.PositiveIntegerField(default=0)
-    midterm = models.PositiveIntegerField(default=0)
-    final = models.PositiveIntegerField(default=0)
 
     def __str__(self):
         return self.student.student.username + " in " + self.course.course.title

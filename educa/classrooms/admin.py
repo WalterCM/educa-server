@@ -25,7 +25,7 @@ class StudentInClassroomAdmin(admin.ModelAdmin):
 
 @admin.register(StudentInCourse)
 class StudentInCourseAdmin(admin.ModelAdmin):
-    list_display = ['student', 'course', 'pc1', 'pc2', 'pc3', 'pc4', 'midterm', 'final']
+    list_display = ['student', 'course', 'pc1', 'pc2', 'pc3']
 
 # @admin.register(Notification)
 # class NotificationAdmin(admin.ModelAdmin):

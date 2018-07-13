@@ -269,8 +269,7 @@ class StudentsGradesView(APIView):
             cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
             membership = get_object_or_404(StudentInCourse, student=sic, course=cic)
             
-            pc_average = (membership.pc1 + membership.pc2 + membership.pc3 + membership.pc4) / 4
-            grade_average = (3 * pc_average + 3 * membership.midterm + 4 * membership.final) / 10
+            grade_average = (membership.pc1 + membership.pc2 + membership.pc3) / 3
             
             students_grades.append({'id':student.id,
                                     'first_name':student.first_name,
@@ -278,10 +277,6 @@ class StudentsGradesView(APIView):
                                     'pc1':membership.pc1,
                                     'pc2':membership.pc2,
                                     'pc3':membership.pc3,
-                                    'pc4':membership.pc4,
-                                    'midterm':membership.midterm,
-                                    'final':membership.final,
-                                    'pc_average':"%.2f" % pc_average,
                                     'grade_average':"%.2f" % grade_average})
         return Response({'students':students_grades})
 
@@ -300,9 +295,6 @@ class StudentsGradesView(APIView):
             membership.pc1 = students[i]['pc1']
             membership.pc2 = students[i]['pc2']
             membership.pc3 = students[i]['pc3']
-            membership.pc4 = students[i]['pc4']
-            membership.midterm = students[i]['midterm']
-            membership.final = students[i]['final']
             membership.save()
 
         return self.get(request, classroom_id, course_id)
