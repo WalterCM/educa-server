@@ -19,4 +19,6 @@ urlpatterns = [
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/grades/$', views.StudentsGradesView.as_view(), name='class_grades'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/attachments/$', views.StudentsAttachmentsView.as_view(), name='class_attachments'),
     url(r'^classrooms/(?P<classroom_id>\d+)/courses/(?P<course_id>\d+)/notifications/$', views.StudentsNotificationsView.as_view(), name='class_notifications'),
+    url(r'^notifications/(?P<notification_id>\d+)/read/$', views.StudentsNotificationsReadView.as_view(), name='class_notifications_read'),
+
 ]

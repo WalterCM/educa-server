@@ -75,11 +75,8 @@ class AddStudentView(APIView):
         return Response(s.data)
 
     def post(self, request, format=None):
-        print("post")
         student_username = request.data["username"]
-        print("username: " + student_username)
         student = get_object_or_404(User, username=student_username)
-        print(student)
 
         is_parent = request.user.groups.filter(name='parent').exists()
 
@@ -97,20 +94,16 @@ class MineView(APIView):
 
     def get(self, request, format=None):
         is_professor = request.user.groups.filter(name='instructor').exists()
-        print(is_professor)
         is_parent = request.user.groups.filter(name='parent').exists()
-        print(is_parent)
         
         if is_professor:
             classrooms = [c.classroom for c in CourseInClassroom.objects.filter(professor=request.user)]
         elif is_parent:
             parent = get_object_or_404(Parent, id=request.user.id)
             student_ids = [student.id for student in parent.students.all()]
-            print(student_ids)
             classrooms = list(set([c.classroom for c in StudentInClassroom.objects.filter(student__in=student_ids)]))
         else:
             classrooms = [c.classroom for c in StudentInClassroom.objects.filter(student=request.user)]
-            print(classrooms)
 
         s = ClassroomSerializer(classrooms, many=True)
         return Response(s.data)
@@ -162,7 +155,6 @@ class CoursesFromClassroomView(APIView):
 #     permission_classes = (IsAuthenticated,)
 
 #     def post(self, request, format=None):
-#         print("ClassroomCreateView")
 #         room = request.data['room']
 #         if Classroom.objects.filter(room=room).exists():
 #             return Response({'created':False, 'reason':'The room already exists'})
@@ -175,24 +167,15 @@ class CoursesFromClassroomView(APIView):
 
 class ClassroomEnrollView(APIView):
     def post(self, request, classroom_id, format=None):
-        print("ClassroomEnrollView")
-        print('1"')
-        print("classrrom id : " + str(classroom_id))
-        print("2")
         classroom = get_object_or_404(Classroom, id=classroom_id)
-        print(classroom)
         if StudentInClassroom.objects.filter(student=request.user, classroom=classroom).exists():
             return Response({'enrolled':False, 'code':1, 'reason':'Already enrolled in that classoom'})
         sic = StudentInClassroom(student=request.user, classroom=classroom)
-        print(sic)
         sic.save()
 
         for course in classroom.courses.all():
-            print(course)
             cic = get_object_or_404(CourseInClassroom, course=course, classroom=classroom)
-            print(cic)
             membership = StudentInCourse(student=sic, course=cic)
-            print(membership)
             membership.save()
 
         return Response({'enrolled':True})
@@ -202,11 +185,8 @@ class StudentsAttendanceView(APIView):
     permission_classes = (IsAuthenticated, IsEnrolled,)
 
     def get(self, request, classroom_id, course_id, format=None):
-        print("get")
         classroom = get_object_or_404(Classroom, id=classroom_id)
-        print(classroom)
         course = get_object_or_404(Course, id=course_id)
-        print(course)
 
         #classes_done = classroom.classes_done
         is_professor = request.user.groups.filter(name='instructor').exists()
@@ -220,19 +200,14 @@ class StudentsAttendanceView(APIView):
         else:
             students = classroom.students.filter(id=request.user.id)
         
-        print(students)
         students_attendance = []
         
         for student in students:
             sic = get_object_or_404(StudentInClassroom, classroom=classroom, student=student)
-            print(sic)
             cic = get_object_or_404(CourseInClassroom, classroom=classroom, course=course)
-            print(cic)
             classes_done = cic.classes_done
-            print("classes_done: " + str(classes_done))
             
             membership = get_object_or_404(StudentInCourse, student=sic, course=cic)
-            print(membership)
             
             classes_attended = membership.classes_attended
             
@@ -388,7 +363,8 @@ class StudentsNotificationsView(APIView):
                                     'subject':notification.subject,
                                     'text':notification.text,
                                     'author':author_name,
-                                    'created':notification.created})
+                                    'created':notification.created,
+                                    'read':notification.read})
         return Response({'notifications':notification_list})
 
     def post(self, request, classroom_id, course_id, format=None):
@@ -403,3 +379,15 @@ class StudentsNotificationsView(APIView):
         notification.save()
 
         return self.get(request, classroom_id, course_id)
+
+class StudentsNotificationsReadView(APIView):
+    authentication_classes = (JWTAuthentication,)
+    permission_classes = (IsAuthenticated, IsEnrolled,)
+
+    def post(self, request, notification_id, format=None):
+        print("post")
+        notification = get_object_or_404(Notification, id=notification_id)
+        notification.read = True
+        notification.save()
+
+        return Response({})

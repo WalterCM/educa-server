@@ -22,6 +22,7 @@ class Course(models.Model):
 
 class Classroom(models.Model):
     room = models.CharField(max_length=200)
+    schedule = models.FileField(upload_to='squedules')
     slug = models.SlugField(max_length=200, unique=True)
     created = models.DateTimeField(auto_now_add=True)
     courses = models.ManyToManyField(Course,
@@ -90,6 +91,7 @@ class Attachment(models.Model):
 class Notification(models.Model):
     course = models.ForeignKey(CourseInClassroom, related_name='notifications_created')
     created = models.DateTimeField(auto_now_add=True)
+    read = models.BooleanField(default=False)
     author = models.ForeignKey(User, related_name='notification_wrote')
     subject = models.CharField(max_length=200)
     text = models.TextField(max_length=500)

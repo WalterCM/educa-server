@@ -1,7 +1,8 @@
 from django.contrib.auth.models import User
+from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import Course, Classroom, CourseInClassroom, StudentInClassroom, StudentInCourse, Parent
+from .models import Course, Classroom, CourseInClassroom, StudentInClassroom, StudentInCourse, Parent, Notification
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
@@ -9,6 +10,24 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super(MyTokenObtainPairSerializer, cls).get_token(user)
         token['is_professor'] = user.groups.filter(name='instructor').exists()
         token['is_parent'] = user.groups.filter(name='parent').exists()
+
+        if token['is_professor']:
+            #courses = CourseInClassroom.objects.filter(professor=user)
+            courses = []
+        elif token['is_parent']:
+            parent = get_object_or_404(Parent, id=user.id)
+            sic = StudentInClassroom.objects.filter(student__in=parent.students.all())
+            memberships = StudentInCourse.objects.filter(student=sic)
+            courses = [m.course for m in memberships]
+        else:
+            sic = StudentInClassroom.objects.filter(student=user)
+            memberships = StudentInCourse.objects.filter(student=sic)
+            courses = [m.course for m in memberships]
+        
+        notifications = Notification.objects.filter(course__in=courses)
+        unread_notifications = notifications.filter(read=False)
+
+        token['unread_notifications'] = len(unread_notifications)
         return token
 
 class UserSerializer(serializers.ModelSerializer):
@@ -71,7 +90,7 @@ class CourseWithProfessorSerializer(serializers.ModelSerializer):
 class ClassroomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Classroom
-        fields = ('id', 'room', 'created')
+        fields = ('id', 'room', 'schedule', 'created')
 
 # class ClassroomWithStudentsSerializer(serializers.ModelSerializer):
 #     classroom = ClassroomSerializer(many=False)
